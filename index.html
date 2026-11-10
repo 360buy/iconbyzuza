@@ -204,16 +204,12 @@ const COLORS=["#c6a15b","#6ba3c6","#9b6bc6","#5bc19a","#c66b8f","#c6a15b","#7bc6
 const staffColor = s => COLORS[Math.max(0,STAFF.indexOf(s))%COLORS.length];
 const STATUS={confirmed:"Potvrđen",done:"Završen",cancelled:"Otkazan"};
 
-// "Zapamti me": localStorage = ostaje prijavljen; sessionStorage = odjava po zatvaranju
-let useLocal = localStorage.getItem('icon-remember') !== '0';
-const authStore = {
-  getItem:k=>(useLocal?localStorage:sessionStorage).getItem(k) ?? (useLocal?sessionStorage:localStorage).getItem(k),
-  setItem:(k,v)=>{(useLocal?localStorage:sessionStorage).setItem(k,v);(useLocal?sessionStorage:localStorage).removeItem(k);},
-  removeItem:k=>{localStorage.removeItem(k);sessionStorage.removeItem(k);}
-};
+// "Zapamti me"
+let remember = localStorage.getItem('icon-remember') !== '0';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON, {
-  auth:{persistSession:true, autoRefreshToken:true, storage:authStore, storageKey:'icon-zuza-auth'}
+  auth:{persistSession:true, autoRefreshToken:true, detectSessionInUrl:false, storage:window.localStorage, storageKey:'icon-zuza-auth'}
 });
+window.addEventListener('pagehide',()=>{ if(!remember) sb.auth.signOut(); });
 let cur = new Date(); cur.setHours(0,0,0,0);
 let appts = [];        // selected day
 let weekCounts = {};   // ymd -> count
@@ -231,8 +227,8 @@ STAFF.forEach(s=>{
 // ---- Auth ----
 async function login(){
   $('loginErr').textContent='';
-  useLocal = $('remember').checked;
-  localStorage.setItem('icon-remember', useLocal?'1':'0');
+  remember = $('remember').checked;
+  localStorage.setItem('icon-remember', remember?'1':'0');
   const {error}=await sb.auth.signInWithPassword({email:$('email').value.trim(),password:$('pass').value});
   if(error)$('loginErr').textContent=error.message;
 }
@@ -380,7 +376,7 @@ $('modal').addEventListener('click',e=>{if(e.target.id==='modal')closeModal();})
 (()=>{const icon="data:image/svg+xml,"+encodeURIComponent("<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='96' fill='#0a0a0c'/><text x='256' y='352' font-family='Georgia,serif' font-weight='700' font-size='300' fill='#c6a15b' text-anchor='middle'>I</text></svg>");
 const mf={name:"ICON by ŽUŽA",short_name:"ICON",start_url:".",scope:".",display:"standalone",orientation:"portrait",background_color:"#0a0a0c",theme_color:"#0a0a0c",icons:[{src:icon,sizes:"any",type:"image/svg+xml",purpose:"any maskable"}]};
 $('mf').href=URL.createObjectURL(new Blob([JSON.stringify(mf)],{type:"application/manifest+json"}));})();
-$('remember').checked = useLocal;
+$('remember').checked = remember;
 </script>
 </body>
 </html>
