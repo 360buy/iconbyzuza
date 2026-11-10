@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ICON by ŽUŽA — Termini</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --bg:#0a0a0c; --panel:#141418; --panel2:#1c1c22; --line:#2a2a33; --line2:#373742;
+    --txt:#ece9e2; --muted:#8e8a82; --gold:#c6a15b; --gold2:#e3c589;
+    --ok:#4caf82; --warn:#d9a94e; --danger:#c15b5b; --radius:14px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:
+    radial-gradient(900px 500px at 85% -10%,rgba(198,161,91,.08),transparent 60%),
+    var(--bg);color:var(--txt);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;min-height:100vh}
+  .wrap{max-width:1100px;margin:0 auto;padding:18px}
+  header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px;flex-wrap:wrap}
+  .brand{display:flex;align-items:center;gap:10px}
+  .brand b{font-size:19px;letter-spacing:.5px}
+  .brand span{color:var(--gold);font-weight:800}
+  .who{font-size:13px;color:var(--muted)}
+  .btn{background:linear-gradient(135deg,var(--gold),var(--gold2));color:#1a1407;border:none;padding:10px 16px;border-radius:10px;font-weight:700;cursor:pointer;font-size:14px;transition:.15s}
+  .btn:hover{filter:brightness(1.08);transform:translateY(-1px)}
+  .btn.ghost{background:transparent;color:var(--txt);border:1px solid var(--line2)}
+  .btn.ghost:hover{border-color:var(--gold);transform:none}
+  .btn.sm{padding:6px 12px;font-size:13px}
+  input,select,textarea{width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--txt);padding:11px 12px;border-radius:10px;font-size:14px;font-family:inherit}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--gold)}
+  label{display:block;font-size:12px;color:var(--muted);margin:0 0 5px 2px;text-transform:uppercase;letter-spacing:.6px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:18px}
+
+  /* week strip */
+  .week{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-bottom:14px}
+  .wd{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 6px;text-align:center;cursor:pointer;transition:.15s;position:relative}
+  .wd:hover{border-color:var(--line2)}
+  .wd .dn{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+  .wd .dd{font-size:20px;font-weight:800;margin-top:2px}
+  .wd .cnt{font-size:11px;color:var(--gold2);margin-top:3px;min-height:14px}
+  .wd.active{background:linear-gradient(135deg,rgba(198,161,91,.18),rgba(198,161,91,.05));border-color:var(--gold)}
+  .wd.today .dd{color:var(--gold2)}
+  .wd.today:after{content:"";position:absolute;top:7px;right:7px;width:6px;height:6px;border-radius:50%;background:var(--gold)}
+
+  .toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+  .toolbar .sp{flex:1}
+  .search{max-width:240px;position:relative}
+  .daynav{display:flex;align-items:center;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:6px}
+  .daynav .date{font-weight:700;min-width:180px;text-align:center;font-size:14px;text-transform:capitalize}
+
+  .summary{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:14px;font-size:13px;color:var(--muted)}
+  .summary b{color:var(--txt)}
+
+  .grid{display:grid;gap:10px}
+  .appt{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--c,var(--gold));border-radius:12px;padding:13px 15px;display:flex;gap:13px;align-items:flex-start;transition:.15s}
+  .appt:hover{border-color:var(--line2)}
+  .appt.cancelled{opacity:.5}
+  .appt.cancelled .body b{text-decoration:line-through}
+  .appt .time{font-weight:800;color:var(--gold2);min-width:98px;font-variant-numeric:tabular-nums;font-size:14px}
+  .appt .body{flex:1;min-width:0}
+  .appt .body b{font-size:15px}
+  .appt .meta{font-size:13px;color:var(--muted);margin-top:3px}
+  .appt .tags{margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+  .dot{width:9px;height:9px;border-radius:50%;background:var(--c,var(--gold));display:inline-block}
+  .chip{display:inline-flex;align-items:center;gap:5px;background:var(--panel2);border:1px solid var(--line);color:var(--txt);padding:3px 9px;border-radius:20px;font-size:11.5px}
+  .chip.st-confirmed{color:var(--ok);border-color:rgba(76,175,130,.4)}
+  .chip.st-done{color:var(--muted)}
+  .chip.st-cancelled{color:var(--danger);border-color:rgba(193,91,91,.4)}
+  .call{color:var(--gold2);text-decoration:none;font-size:13px;display:inline-flex;align-items:center;gap:5px}
+  .call:hover{text-decoration:underline}
+  .appt .acts{display:flex;gap:6px;flex-shrink:0}
+  .empty{color:var(--muted);text-align:center;padding:48px 10px}
+
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,.65);backdrop-filter:blur(3px);display:none;align-items:center;justify-content:center;padding:16px;z-index:50}
+  .modal.on{display:flex}
+  .sheet{width:100%;max-width:470px;max-height:92vh;overflow:auto}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .mt{margin-top:12px}
+  .seg{display:flex;gap:6px}
+  .seg button{flex:1;background:var(--panel2);border:1px solid var(--line);color:var(--muted);padding:9px;border-radius:9px;cursor:pointer;font-size:13px;font-weight:600}
+  .seg button.on{background:rgba(198,161,91,.15);border-color:var(--gold);color:var(--gold2)}
+  .login{max-width:380px;margin:9vh auto 0}
+  .err{color:var(--danger);font-size:13px;margin-top:10px;min-height:16px}
+  .hint{color:var(--muted);font-size:12px;margin-top:8px}
+  @media(max-width:620px){
+    .row{grid-template-columns:1fr}.appt{flex-wrap:wrap}
+    .week{gap:5px}.wd{padding:8px 3px}.wd .dd{font-size:17px}
+    .daynav .date{min-width:120px;font-size:13px}.search{max-width:100%;flex:1}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <!-- LOGIN -->
+  <div id="loginView" class="login" style="display:none">
+    <div class="card">
+      <div class="brand" style="margin-bottom:16px"><b>ICON <span>by ŽUŽA</span></b></div>
+      <label>Email</label>
+      <input id="email" type="email" placeholder="frizer@salon.me" autocomplete="username">
+      <div class="mt"></div>
+      <label>Lozinka</label>
+      <input id="pass" type="password" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')login()">
+      <div class="mt"></div>
+      <button class="btn" style="width:100%" onclick="login()">Prijava</button>
+      <div class="err" id="loginErr"></div>
+    </div>
+  </div>
+
+  <!-- APP -->
+  <div id="appView" style="display:none">
+    <header>
+      <div class="brand"><b>ICON <span>by ŽUŽA</span></b></div>
+      <div style="display:flex;align-items:center;gap:12px">
+        <span class="who" id="who"></span>
+        <button class="btn ghost sm" onclick="logout()">Odjava</button>
+      </div>
+    </header>
+
+    <div class="week" id="week"></div>
+
+    <div class="toolbar">
+      <div class="daynav">
+        <button class="btn ghost sm" onclick="shiftDay(-1)">‹</button>
+        <span class="date" id="dateLabel"></span>
+        <button class="btn ghost sm" onclick="shiftDay(1)">›</button>
+      </div>
+      <button class="btn ghost sm" onclick="goToday()">Danas</button>
+      <select id="filter" style="max-width:190px" onchange="render()"><option value="">Svi frizeri</option></select>
+      <div class="search"><input id="search" placeholder="🔍 Pretraga klijenta..." oninput="render()"></div>
+      <div class="sp"></div>
+      <button class="btn" onclick="openNew()">+ Novi termin</button>
+    </div>
+
+    <div class="summary" id="summary"></div>
+    <div id="list" class="grid"></div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="modal" id="modal">
+  <div class="card sheet">
+    <h3 id="mTitle" style="margin-bottom:16px">Novi termin</h3>
+    <input type="hidden" id="mId">
+    <div class="row">
+      <div><label>Klijent</label><input id="mClient" placeholder="Ime klijenta"></div>
+      <div><label>Telefon</label><input id="mPhone" type="tel" placeholder="+382..."></div>
+    </div>
+    <div class="mt"></div>
+    <label>Usluga</label>
+    <input id="mService" placeholder="Šišanje, farbanje...">
+    <div class="row mt">
+      <div><label>Datum</label><input id="mDate" type="date"></div>
+      <div><label>Frizer</label><select id="mStaff"></select></div>
+    </div>
+    <div class="row mt">
+      <div><label>Početak</label><input id="mStart" type="time" onchange="autoEnd()"></div>
+      <div><label>Kraj</label><input id="mEnd" type="time"></div>
+    </div>
+    <div class="mt"></div>
+    <label>Status</label>
+    <div class="seg" id="mStatus">
+      <button data-v="confirmed" class="on" onclick="pickStatus(this)">Potvrđen</button>
+      <button data-v="done" onclick="pickStatus(this)">Završen</button>
+      <button data-v="cancelled" onclick="pickStatus(this)">Otkazan</button>
+    </div>
+    <div class="mt"></div>
+    <label>Napomena</label>
+    <textarea id="mNote" rows="2" placeholder="Opcionalno"></textarea>
+    <div class="err" id="mErr"></div>
+    <div style="display:flex;gap:10px;margin-top:16px;align-items:center">
+      <button class="btn ghost sm" id="mDel" onclick="del()" style="color:var(--danger);border-color:var(--danger)">Obriši</button>
+      <div style="flex:1"></div>
+      <button class="btn ghost" onclick="closeModal()">Otkaži</button>
+      <button class="btn" onclick="save()">Sačuvaj</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== KONFIGURACIJA — unesi svoje Supabase podatke =====
+const SUPABASE_URL  = "https://TVOJ-PROJEKAT.supabase.co";
+const SUPABASE_ANON = "TVOJ-ANON-KEY";
+const STAFF = ["Ana","Marko","Jelena","Nikola"];
+// =========================================================
+
+const COLORS=["#c6a15b","#6ba3c6","#9b6bc6","#5bc19a","#c66b8f","#c6a15b","#7bc65b","#c6895b"];
+const staffColor = s => COLORS[Math.max(0,STAFF.indexOf(s))%COLORS.length];
+const STATUS={confirmed:"Potvrđen",done:"Završen",cancelled:"Otkazan"};
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+let cur = new Date(); cur.setHours(0,0,0,0);
+let appts = [];        // selected day
+let weekCounts = {};   // ymd -> count
+
+const $ = id => document.getElementById(id);
+const pad = n => String(n).padStart(2,'0');
+const ymd = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const fmtDate = d => d.toLocaleDateString('sr-Latn-ME',{weekday:'long',day:'numeric',month:'long'});
+
+STAFF.forEach(s=>{
+  $('mStaff').insertAdjacentHTML('beforeend',`<option>${s}</option>`);
+  $('filter').insertAdjacentHTML('beforeend',`<option>${s}</option>`);
+});
+
+// ---- Auth ----
+async function login(){
+  $('loginErr').textContent='';
+  const {error}=await sb.auth.signInWithPassword({email:$('email').value.trim(),password:$('pass').value});
+  if(error)$('loginErr').textContent=error.message;
+}
+async function logout(){await sb.auth.signOut();}
+sb.auth.onAuthStateChange((_e,s)=>{
+  if(s){$('loginView').style.display='none';$('appView').style.display='block';$('who').textContent=s.user.email;goToday();subscribe();}
+  else{$('appView').style.display='none';$('loginView').style.display='block';}
+});
+
+// ---- Week strip ----
+function weekStart(d){const x=new Date(d);const dow=(x.getDay()+6)%7;x.setDate(x.getDate()-dow);return x;}
+async function loadWeek(){
+  const ws=weekStart(cur), we=new Date(ws); we.setDate(we.getDate()+6);
+  const {data}=await sb.from('appointments').select('day').gte('day',ymd(ws)).lte('day',ymd(we));
+  weekCounts={}; (data||[]).forEach(r=>weekCounts[r.day]=(weekCounts[r.day]||0)+1);
+  renderWeek();
+}
+function renderWeek(){
+  const ws=weekStart(cur), today=ymd(new Date());
+  let h='';
+  for(let i=0;i<7;i++){
+    const d=new Date(ws); d.setDate(d.getDate()+i); const k=ymd(d);
+    const c=weekCounts[k]||0;
+    h+=`<div class="wd ${k===ymd(cur)?'active':''} ${k===today?'today':''}" onclick="pickDay('${k}')">
+      <div class="dn">${d.toLocaleDateString('sr-Latn-ME',{weekday:'short'})}</div>
+      <div class="dd">${d.getDate()}</div>
+      <div class="cnt">${c?c+' term.':''}</div></div>`;
+  }
+  $('week').innerHTML=h;
+}
+function pickDay(k){cur=new Date(k+'T00:00:00');load();}
+
+// ---- Data ----
+async function load(){
+  const {data,error}=await sb.from('appointments').select('*').eq('day',ymd(cur)).order('start_time');
+  if(error){console.error(error);return;}
+  appts=data||[]; loadWeek(); render();
+}
+function subscribe(){
+  sb.channel('appts').on('postgres_changes',{event:'*',schema:'public',table:'appointments'},()=>load()).subscribe();
+}
+
+function render(){
+  $('dateLabel').textContent=fmtDate(cur);
+  renderWeek();
+  const f=$('filter').value, q=$('search').value.trim().toLowerCase();
+  let rows=appts.filter(a=>(!f||a.staff===f)&&(!q||(a.client||'').toLowerCase().includes(q)||(a.service||'').toLowerCase().includes(q)));
+  const active=rows.filter(a=>a.status!=='cancelled').length;
+  $('summary').innerHTML=`<span><b>${rows.length}</b> termina</span><span><b>${active}</b> aktivnih</span>`;
+  const list=$('list');
+  if(!rows.length){list.innerHTML='<div class="empty">Nema termina za ovaj dan.</div>';return;}
+  list.innerHTML=rows.map(a=>{
+    const c=staffColor(a.staff), st=a.status||'confirmed';
+    const phone=a.phone?`<a class="call" href="tel:${a.phone}">📞 ${esc(a.phone)}</a> <a class="call" target="_blank" href="https://wa.me/${a.phone.replace(/[^0-9]/g,'')}">· WhatsApp</a>`:'';
+    return `<div class="appt ${st==='cancelled'?'cancelled':''}" style="--c:${c}">
+      <div class="time">${a.start_time?.slice(0,5)||''}${a.end_time?' – '+a.end_time.slice(0,5):''}</div>
+      <div class="body">
+        <b>${esc(a.client)||'—'}</b>
+        <div class="meta">${esc(a.service)||''}</div>
+        <div class="tags">
+          <span class="chip"><span class="dot"></span>${esc(a.staff)}</span>
+          <span class="chip st-${st}">${STATUS[st]}</span>
+          ${phone}
+        </div>
+        ${a.note?`<div class="meta" style="margin-top:7px">📝 ${esc(a.note)}</div>`:''}
+      </div>
+      <div class="acts"><button class="btn ghost sm" onclick='edit(${JSON.stringify(a.id)})'>Izmijeni</button></div>
+    </div>`;
+  }).join('');
+}
+const esc=s=>(s||'').replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+
+// ---- Nav ----
+function shiftDay(n){cur.setDate(cur.getDate()+n);load();}
+function goToday(){cur=new Date();cur.setHours(0,0,0,0);load();}
+
+// ---- Modal ----
+let mStatusVal='confirmed';
+function pickStatus(b){[...$('mStatus').children].forEach(x=>x.classList.remove('on'));b.classList.add('on');mStatusVal=b.dataset.v;}
+function autoEnd(){
+  if(!$('mStart').value||$('mEnd').value)return;
+  const [h,m]=$('mStart').value.split(':').map(Number);
+  const t=new Date(0,0,0,h,m+30); $('mEnd').value=pad(t.getHours())+':'+pad(t.getMinutes());
+}
+function setStatus(v){mStatusVal=v;[...$('mStatus').children].forEach(x=>x.classList.toggle('on',x.dataset.v===v));}
+function openNew(){
+  $('mTitle').textContent='Novi termin';
+  $('mId').value='';$('mClient').value='';$('mPhone').value='';$('mService').value='';
+  $('mDate').value=ymd(cur);$('mStaff').value=$('filter').value||STAFF[0];
+  $('mStart').value='09:00';$('mEnd').value='09:30';$('mNote').value='';
+  setStatus('confirmed');$('mErr').textContent='';$('mDel').style.display='none';
+  $('modal').classList.add('on');$('mClient').focus();
+}
+function edit(id){
+  const a=appts.find(x=>x.id===id);if(!a)return;
+  $('mTitle').textContent='Izmjena termina';
+  $('mId').value=a.id;$('mClient').value=a.client||'';$('mPhone').value=a.phone||'';$('mService').value=a.service||'';
+  $('mDate').value=a.day;$('mStaff').value=a.staff;
+  $('mStart').value=a.start_time?.slice(0,5)||'';$('mEnd').value=a.end_time?.slice(0,5)||'';
+  setStatus(a.status||'confirmed');$('mNote').value=a.note||'';$('mErr').textContent='';$('mDel').style.display='inline-block';
+  $('modal').classList.add('on');
+}
+function closeModal(){$('modal').classList.remove('on');}
+
+async function save(){
+  const rec={
+    client:$('mClient').value.trim(),phone:$('mPhone').value.trim(),service:$('mService').value.trim(),
+    day:$('mDate').value,staff:$('mStaff').value,status:mStatusVal,
+    start_time:$('mStart').value||null,end_time:$('mEnd').value||null,note:$('mNote').value.trim()
+  };
+  if(!rec.day||!rec.start_time){$('mErr').textContent='Datum i vrijeme početka su obavezni.';return;}
+  const id=$('mId').value;let error;
+  if(id)({error}=await sb.from('appointments').update(rec).eq('id',id));
+  else({error}=await sb.from('appointments').insert(rec));
+  if(error){$('mErr').textContent=error.message;return;}
+  closeModal();cur=new Date(rec.day+'T00:00:00');load();
+}
+async function del(){
+  const id=$('mId').value;if(!id)return;if(!confirm('Obrisati termin?'))return;
+  const {error}=await sb.from('appointments').delete().eq('id',id);
+  if(error){$('mErr').textContent=error.message;return;}
+  closeModal();load();
+}
+$('modal').addEventListener('click',e=>{if(e.target.id==='modal')closeModal();});
+</script>
+</body>
+</html>
