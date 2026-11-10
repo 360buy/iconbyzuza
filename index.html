@@ -97,7 +97,7 @@
   .hint{color:var(--muted);font-size:12px;margin-top:8px}
   @media(max-width:620px){
     .row{grid-template-columns:1fr}.appt{flex-wrap:wrap}
-    .week{gap:5px}.wd{padding:8px 3px}.wd .dd{font-size:17px}
+    .week{gap:5px}.wd{flex:0 0 56px;padding:8px 3px}.wd .dd{font-size:17px}
     .daynav .date{min-width:120px;font-size:13px}.search{max-width:100%;flex:1}
   }
 </style>
@@ -166,8 +166,8 @@
       <div><label>Barber</label><select id="mStaff"></select></div>
     </div>
     <div class="row mt">
-      <div><label>Početak</label><input id="mStart" type="time" onchange="autoEnd()"></div>
-      <div><label>Kraj</label><input id="mEnd" type="time"></div>
+      <div><label>Početak</label><input id="mStart" type="time" step="900" onchange="autoEnd()"></div>
+      <div><label>Kraj</label><input id="mEnd" type="time" step="900"></div>
     </div>
     <div class="mt"></div>
     <label>Status</label>
@@ -281,7 +281,7 @@ function render(){
   if(!rows.length){list.innerHTML='<div class="empty">Nema termina za ovaj dan.</div>';return;}
   list.innerHTML=rows.map(a=>{
     const c=staffColor(a.staff), st=a.status||'confirmed';
-    const phone=a.phone?`<a class="call" href="tel:${a.phone}">📞 ${esc(a.phone)}</a> <a class="call" target="_blank" href="https://wa.me/${a.phone.replace(/[^0-9]/g,'')}">· WhatsApp</a>`:'';
+    const phone=a.phone?`<a class="call" href="tel:${a.phone}">📞 ${esc(a.phone)}</a>`:'';
     return `<div class="appt ${st==='cancelled'?'cancelled':''}" style="--c:${c}">
       <div class="time">${a.start_time?.slice(0,5)||''}${a.end_time?' – '+a.end_time.slice(0,5):''}</div>
       <div class="body">
