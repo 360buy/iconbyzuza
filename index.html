@@ -134,8 +134,10 @@
     <div class="toolbar">
       <div class="daynav">
         <button class="btn ghost sm" onclick="shiftDay(-1)">‹</button>
-        <span class="date" id="dateLabel" onclick="openCal()" style="cursor:pointer"></span>
-        <input type="date" id="jump" onchange="jumpTo(this.value)" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none">
+        <span style="position:relative;display:inline-flex;align-items:center">
+          <span class="date" id="dateLabel"></span>
+          <input type="date" id="jump" onchange="jumpTo(this.value)" style="position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;border:0;padding:0">
+        </span>
         <button class="btn ghost sm" onclick="shiftDay(1)">›</button>
       </div>
       <button class="btn ghost sm" onclick="goToday()">Danas</button>
@@ -273,6 +275,7 @@ function subscribe(){
 
 function render(){
   $('dateLabel').textContent=fmtDate(cur);
+  $('jump').value=ymd(cur);
   renderWeek();
   const f=$('filter').value, q=$('search').value.trim().toLowerCase();
   let rows=appts.filter(a=>(!f||a.staff===f)&&(!q||(a.client||'').toLowerCase().includes(q)||(a.service||'').toLowerCase().includes(q)));
@@ -304,8 +307,6 @@ const esc=s=>(s||'').replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]
 // ---- Nav ----
 function shiftDay(n){cur.setDate(cur.getDate()+n);load();}
 function goToday(){cur=new Date();cur.setHours(0,0,0,0);load();}
-function openCal(){const j=$('jump');j.value=ymd(cur);
-  if(j.showPicker){try{j.showPicker();return;}catch(e){}} j.focus();j.click();}
 function jumpTo(v){if(v){cur=new Date(v+'T00:00:00');cur.setHours(0,0,0,0);load();}}
 
 // ---- Modal ----
