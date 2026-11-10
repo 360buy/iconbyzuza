@@ -224,7 +224,7 @@ function setBarber(s){me=s;localStorage.setItem('icon-barber',s);showApp();}
 function openPick(){$('appView').style.display='none';$('pickView').style.display='block';}
 function showApp(){
   $('pickView').style.display='none';$('appView').style.display='block';
-  $('who').textContent=me; goToday(); subscribe();
+  $('who').textContent=me; $('filter').value=me; goToday(); subscribe();
 }
 function start(){ if(me)showApp(); else openPick(); }
 
