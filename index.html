@@ -56,7 +56,7 @@
 
   .toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
   .toolbar .sp{flex:1}
-  .search{max-width:240px;position:relative}
+  .search{flex:1;min-width:180px;position:relative}
   .daynav{display:flex;align-items:center;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:6px}
   .daynav .date{font-weight:700;min-width:180px;text-align:center;font-size:14px;text-transform:capitalize}
 
@@ -137,7 +137,6 @@
       <button class="btn ghost sm" onclick="goToday()">Danas</button>
       <select id="filter" style="max-width:190px" onchange="render()"><option value="">Svi barberi</option></select>
       <div class="search"><input id="search" placeholder="🔍 Pretraga klijenta..." oninput="render()"></div>
-      <div class="sp"></div>
       <button class="btn" onclick="openNew()">+ Novi termin</button>
     </div>
 
