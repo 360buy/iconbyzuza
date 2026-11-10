@@ -226,6 +226,11 @@ STAFF.forEach(s=>{
   $('filter').insertAdjacentHTML('beforeend',`<option>${s}</option>`);
 });
 
+// trajno čuvanje kredencijala (localStorage)
+function saveCred(e,p){try{localStorage.setItem('icon-cred',btoa(unescape(encodeURIComponent(JSON.stringify({e,p})))));}catch{}}
+function readCred(){try{const v=localStorage.getItem('icon-cred');return v?JSON.parse(decodeURIComponent(escape(atob(v)))):null;}catch{return null;}}
+function clearCred(){try{localStorage.removeItem('icon-cred');}catch{}}
+
 // ---- Auth ----
 async function login(){
   $('loginErr').textContent='';
@@ -234,19 +239,15 @@ async function login(){
   const email=$('email').value.trim(), password=$('pass').value;
   const {error}=await sb.auth.signInWithPassword({email,password});
   if(error){$('loginErr').textContent=error.message;return;}
-  if(remember)localStorage.setItem('icon-cred',btoa(JSON.stringify({e:email,p:password})));
-  else localStorage.removeItem('icon-cred');
+  if(remember)saveCred(email,password); else clearCred();
 }
-async function logout(){localStorage.removeItem('icon-cred');await sb.auth.signOut();}
+async function logout(){clearCred();await sb.auth.signOut();}
 async function tryAutoLogin(){
-  const raw=localStorage.getItem('icon-cred'); if(!raw)return;
-  try{
-    const {e,p}=JSON.parse(atob(raw));
-    $('email').value=e; $('pass').value=p;
-    const {data}=await sb.auth.getSession();
-    if(!data.session){const {error}=await sb.auth.signInWithPassword({email:e,password:p});
-      if(error)localStorage.removeItem('icon-cred');}
-  }catch{}
+  const c=readCred(); if(!c)return;
+  $('email').value=c.e; $('pass').value=c.p;
+  const {data}=await sb.auth.getSession();
+  if(!data.session){const {error}=await sb.auth.signInWithPassword({email:c.e,password:c.p});
+    if(error)clearCred();}
 }
 sb.auth.onAuthStateChange((_e,s)=>{
   if(s){$('loginView').style.display='none';$('appView').style.display='block';$('who').textContent=s.user.email;goToday();subscribe();}
