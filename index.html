@@ -210,6 +210,8 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON, {
   auth:{persistSession:true, autoRefreshToken:true, detectSessionInUrl:false, storage:window.localStorage, storageKey:'icon-zuza-auth'}
 });
 window.addEventListener('pagehide',()=>{ if(!remember) sb.auth.signOut(); });
+// traži od uređaja da ne briše podatke kad se app ubije iz pozadine
+if(navigator.storage&&navigator.storage.persist)navigator.storage.persist().catch(()=>{});
 let cur = new Date(); cur.setHours(0,0,0,0);
 let appts = [];        // selected day
 let weekCounts = {};   // ymd -> count
