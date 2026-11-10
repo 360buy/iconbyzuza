@@ -20,11 +20,13 @@
     --ok:#4caf82; --warn:#d9a94e; --danger:#c15b5b; --radius:14px;
   }
   *{box-sizing:border-box;margin:0;padding:0}
-  html,body{overflow-x:hidden;overscroll-behavior:none}
+  html{overflow-x:clip}
+  html,body{overflow-x:hidden;overscroll-behavior:none;position:relative;width:100%;max-width:100%}
+  input,select,textarea,img{max-width:100%}
   body{background:
     radial-gradient(900px 500px at 85% -10%,rgba(198,161,91,.08),transparent 60%),
     var(--bg);color:var(--txt);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;min-height:100vh;width:100%;max-width:100vw;touch-action:pan-y;-webkit-text-size-adjust:100%;padding-top:env(safe-area-inset-top)}
-  .wrap{max-width:1100px;margin:0 auto;padding:18px}
+  .wrap{max-width:1100px;margin:0 auto;padding:18px;overflow-x:clip}
   header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px;flex-wrap:wrap}
   .brand{display:flex;align-items:center;gap:10px}
   .brand b{font-size:19px;letter-spacing:.5px}
@@ -325,7 +327,17 @@ async function save(){
     start_time:$('mStart').value||null,end_time:$('mEnd').value||null,note:$('mNote').value.trim()
   };
   if(!rec.day||!rec.start_time){$('mErr').textContent='Datum i vrijeme početka su obavezni.';return;}
-  const id=$('mId').value;let error;
+  const id=$('mId').value;
+  // provjera preklapanja (isti barber, isti dan)
+  if(rec.status!=='cancelled'){
+    const ns=rec.start_time, ne=rec.end_time||rec.start_time;
+    let qb=sb.from('appointments').select('start_time,end_time,client,status').eq('day',rec.day).eq('staff',rec.staff);
+    if(id)qb=qb.neq('id',id);
+    const {data:ex}=await qb;
+    const clash=(ex||[]).find(x=>x.status!=='cancelled'&&x.start_time&&ns<(x.end_time||x.start_time)&&ne>x.start_time);
+    if(clash&&!confirm(`Preklapa se sa terminom (${clash.start_time.slice(0,5)}${clash.end_time?'–'+clash.end_time.slice(0,5):''}${clash.client?', '+clash.client:''}) kod barbera ${rec.staff}.\nSvejedno sačuvati?`))return;
+  }
+  let error;
   if(id)({error}=await sb.from('appointments').update(rec).eq('id',id));
   else({error}=await sb.from('appointments').insert(rec));
   if(error){$('mErr').textContent=error.message;return;}
