@@ -42,9 +42,10 @@
   label{display:block;font-size:12px;color:var(--muted);margin:0 0 5px 2px;text-transform:uppercase;letter-spacing:.6px}
   .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:18px}
 
-  /* week strip */
-  .week{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-bottom:14px}
-  .wd{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 6px;text-align:center;cursor:pointer;transition:.15s;position:relative}
+  /* date rail */
+  .week{display:flex;gap:8px;margin-bottom:14px;overflow-x:auto;overflow-y:hidden;touch-action:pan-x;-webkit-overflow-scrolling:touch;scroll-snap-type:x proximity;scrollbar-width:none;padding-bottom:2px}
+  .week::-webkit-scrollbar{display:none}
+  .wd{flex:0 0 62px;scroll-snap-align:center;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 6px;text-align:center;cursor:pointer;transition:.15s;position:relative}
   .wd:hover{border-color:var(--line2)}
   .wd .dn{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
   .wd .dd{font-size:20px;font-weight:800;margin-top:2px}
@@ -228,26 +229,34 @@ sb.auth.onAuthStateChange((_e,s)=>{
   else{$('appView').style.display='none';$('loginView').style.display='block';}
 });
 
-// ---- Week strip ----
-function weekStart(d){const x=new Date(d);const dow=(x.getDay()+6)%7;x.setDate(x.getDate()-dow);return x;}
+// ---- Date rail (scrollable) ----
+function railRange(){
+  const t=new Date(); t.setHours(0,0,0,0);
+  let s=new Date(t); s.setDate(s.getDate()-7);
+  let e=new Date(t); e.setDate(e.getDate()+45);
+  if(cur<s)s=new Date(cur);
+  if(cur>e)e=new Date(cur);
+  return [s,e];
+}
 async function loadWeek(){
-  const ws=weekStart(cur), we=new Date(ws); we.setDate(we.getDate()+6);
-  const {data}=await sb.from('appointments').select('day').gte('day',ymd(ws)).lte('day',ymd(we));
+  const [s,e]=railRange();
+  const {data}=await sb.from('appointments').select('day').gte('day',ymd(s)).lte('day',ymd(e));
   weekCounts={}; (data||[]).forEach(r=>weekCounts[r.day]=(weekCounts[r.day]||0)+1);
   renderWeek();
 }
 function renderWeek(){
-  const ws=weekStart(cur), today=ymd(new Date());
-  let h='';
-  for(let i=0;i<7;i++){
-    const d=new Date(ws); d.setDate(d.getDate()+i); const k=ymd(d);
-    const c=weekCounts[k]||0;
+  const [s,e]=railRange(), today=ymd(new Date());
+  let h='', d=new Date(s);
+  while(d<=e){
+    const k=ymd(d), c=weekCounts[k]||0;
     h+=`<div class="wd ${k===ymd(cur)?'active':''} ${k===today?'today':''}" onclick="pickDay('${k}')">
       <div class="dn">${d.toLocaleDateString('sr-Latn-ME',{weekday:'short'})}</div>
       <div class="dd">${d.getDate()}</div>
       <div class="cnt">${c?c+' term.':''}</div></div>`;
+    d.setDate(d.getDate()+1);
   }
-  $('week').innerHTML=h;
+  const w=$('week'); w.innerHTML=h;
+  const a=w.querySelector('.wd.active'); if(a)a.scrollIntoView({inline:'center',block:'nearest'});
 }
 function pickDay(k){cur=new Date(k+'T00:00:00');load();}
 
