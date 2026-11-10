@@ -224,7 +224,7 @@ function showApp(){
   $('pickView').style.display='none';$('appView').style.display='block';
   $('who').textContent=me; $('barberBtn').textContent='👤 '+me; $('filter').value=me; goToday(); subscribe();
 }
-function start(){ if(me)showApp(); else openPick(); }
+function start(){ openPick(); }  // pri svakom ulasku biraš nalog
 
 // ---- Date rail (scrollable) ----
 function railRange(){
