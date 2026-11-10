@@ -226,10 +226,18 @@ STAFF.forEach(s=>{
   $('filter').insertAdjacentHTML('beforeend',`<option>${s}</option>`);
 });
 
-// trajno čuvanje kredencijala (localStorage)
-function saveCred(e,p){try{localStorage.setItem('icon-cred',btoa(unescape(encodeURIComponent(JSON.stringify({e,p})))));}catch{}}
-function readCred(){try{const v=localStorage.getItem('icon-cred');return v?JSON.parse(decodeURIComponent(escape(atob(v)))):null;}catch{return null;}}
-function clearCred(){try{localStorage.removeItem('icon-cred');}catch{}}
+// trajno čuvanje (cookie + localStorage; cookie je nevidljiv, bez pitanja)
+function saveCred(e,p){const v=btoa(unescape(encodeURIComponent(JSON.stringify({e,p}))));
+  try{localStorage.setItem('icon-cred',v);}catch{}
+  document.cookie='icon_cred='+v+'; path=/; max-age=63072000; SameSite=Lax; Secure';}
+function readCred(){
+  let v=null; const m=document.cookie.match(/(?:^|; )icon_cred=([^;]+)/); if(m)v=m[1];
+  if(!v){try{v=localStorage.getItem('icon-cred');}catch{}}
+  if(!v)return null;
+  try{return JSON.parse(decodeURIComponent(escape(atob(v))));}catch{return null;}
+}
+function clearCred(){try{localStorage.removeItem('icon-cred');}catch{}
+  document.cookie='icon_cred=; path=/; max-age=0; SameSite=Lax; Secure';}
 
 // ---- Auth ----
 async function login(){
