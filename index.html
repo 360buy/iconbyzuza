@@ -134,7 +134,8 @@
     <div class="toolbar">
       <div class="daynav">
         <button class="btn ghost sm" onclick="shiftDay(-1)">‹</button>
-        <span class="date" id="dateLabel"></span>
+        <span class="date" id="dateLabel" onclick="openCal()" style="cursor:pointer"></span>
+        <input type="date" id="jump" onchange="jumpTo(this.value)" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none">
         <button class="btn ghost sm" onclick="shiftDay(1)">›</button>
       </div>
       <button class="btn ghost sm" onclick="goToday()">Danas</button>
@@ -303,6 +304,9 @@ const esc=s=>(s||'').replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]
 // ---- Nav ----
 function shiftDay(n){cur.setDate(cur.getDate()+n);load();}
 function goToday(){cur=new Date();cur.setHours(0,0,0,0);load();}
+function openCal(){const j=$('jump');j.value=ymd(cur);
+  if(j.showPicker){try{j.showPicker();return;}catch(e){}} j.focus();j.click();}
+function jumpTo(v){if(v){cur=new Date(v+'T00:00:00');cur.setHours(0,0,0,0);load();}}
 
 // ---- Modal ----
 let mStatusVal='confirmed';
