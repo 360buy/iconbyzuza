@@ -229,10 +229,23 @@ async function login(){
   $('loginErr').textContent='';
   remember = $('remember').checked;
   localStorage.setItem('icon-remember', remember?'1':'0');
-  const {error}=await sb.auth.signInWithPassword({email:$('email').value.trim(),password:$('pass').value});
-  if(error)$('loginErr').textContent=error.message;
+  const email=$('email').value.trim(), password=$('pass').value;
+  const {error}=await sb.auth.signInWithPassword({email,password});
+  if(error){$('loginErr').textContent=error.message;return;}
+  if(remember)localStorage.setItem('icon-cred',btoa(JSON.stringify({e:email,p:password})));
+  else localStorage.removeItem('icon-cred');
 }
-async function logout(){await sb.auth.signOut();}
+async function logout(){localStorage.removeItem('icon-cred');await sb.auth.signOut();}
+async function tryAutoLogin(){
+  const raw=localStorage.getItem('icon-cred'); if(!raw)return;
+  try{
+    const {e,p}=JSON.parse(atob(raw));
+    $('email').value=e; $('pass').value=p;
+    const {data}=await sb.auth.getSession();
+    if(!data.session){const {error}=await sb.auth.signInWithPassword({email:e,password:p});
+      if(error)localStorage.removeItem('icon-cred');}
+  }catch{}
+}
 sb.auth.onAuthStateChange((_e,s)=>{
   if(s){$('loginView').style.display='none';$('appView').style.display='block';$('who').textContent=s.user.email;goToday();subscribe();}
   else{$('appView').style.display='none';$('loginView').style.display='block';}
@@ -377,6 +390,7 @@ $('modal').addEventListener('click',e=>{if(e.target.id==='modal')closeModal();})
 const mf={name:"ICON by ŽUŽA",short_name:"ICON",start_url:".",scope:".",display:"standalone",orientation:"portrait",background_color:"#0a0a0c",theme_color:"#0a0a0c",icons:[{src:icon,sizes:"any",type:"image/svg+xml",purpose:"any maskable"}]};
 $('mf').href=URL.createObjectURL(new Blob([JSON.stringify(mf)],{type:"application/manifest+json"}));})();
 $('remember').checked = remember;
+tryAutoLogin();
 </script>
 </body>
 </html>
