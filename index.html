@@ -199,7 +199,9 @@ const COLORS=["#c6a15b","#6ba3c6","#9b6bc6","#5bc19a","#c66b8f","#c6a15b","#7bc6
 const staffColor = s => COLORS[Math.max(0,STAFF.indexOf(s))%COLORS.length];
 const STATUS={confirmed:"Potvrđen",done:"Završen",cancelled:"Otkazan"};
 
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON, {
+  auth:{persistSession:true, autoRefreshToken:true, storage:window.localStorage, storageKey:'icon-zuza-auth'}
+});
 let cur = new Date(); cur.setHours(0,0,0,0);
 let appts = [];        // selected day
 let weekCounts = {};   // ymd -> count
