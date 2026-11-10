@@ -93,6 +93,12 @@
   .seg button{flex:1;background:var(--panel2);border:1px solid var(--line);color:var(--muted);padding:9px;border-radius:9px;cursor:pointer;font-size:13px;font-weight:600}
   .seg button.on{background:rgba(198,161,91,.15);border-color:var(--gold);color:var(--gold2)}
   .login{max-width:380px;margin:9vh auto 0}
+  .pick{min-height:100dvh;display:flex;flex-direction:column;justify-content:center;max-width:460px;margin:0 auto;padding:24px}
+  .pickgrid{display:flex;justify-content:center;gap:20px;flex-wrap:wrap}
+  .pickcard{display:flex;flex-direction:column;align-items:center;gap:12px;background:none;border:none;cursor:pointer}
+  .pickcard .circ{width:108px;height:108px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:Georgia,serif;font-size:44px;font-weight:800;color:#0a0a0c;border:2px solid rgba(255,255,255,.12);box-shadow:0 8px 24px rgba(0,0,0,.35);transition:.18s}
+  .pickcard .nm{font-size:16px;font-weight:600;color:var(--txt);letter-spacing:.3px}
+  .pickcard:hover .circ,.pickcard:active .circ{transform:scale(1.06);box-shadow:0 0 0 4px rgba(198,161,91,.3),0 8px 24px rgba(0,0,0,.4)}
   .err{color:var(--danger);font-size:13px;margin-top:10px;min-height:16px}
   .hint{color:var(--muted);font-size:12px;margin-top:8px}
   @media(max-width:620px){
@@ -104,23 +110,10 @@
 </head>
 <body>
 <div class="wrap">
-  <!-- LOGIN -->
-  <div id="loginView" class="login" style="display:none">
-    <div class="card">
-      <div class="brand" style="margin-bottom:16px"><b>ICON <span>by ŽUŽA</span></b></div>
-      <label>Email</label>
-      <input id="email" type="email" placeholder="barber@icon.me" autocomplete="username">
-      <div class="mt"></div>
-      <label>Lozinka</label>
-      <input id="pass" type="password" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')login()">
-      <label style="display:flex;align-items:center;gap:9px;margin:14px 2px 0;text-transform:none;letter-spacing:0;color:var(--txt);cursor:pointer">
-        <input type="checkbox" id="remember" checked style="width:18px;height:18px;accent-color:var(--gold)">
-        Zapamti me
-      </label>
-      <div class="mt"></div>
-      <button class="btn" style="width:100%" onclick="login()">Prijava</button>
-      <div class="err" id="loginErr"></div>
-    </div>
+  <!-- IZBOR BARBERA -->
+  <div id="pickView" class="pick" style="display:none">
+    <div class="brand" style="justify-content:center;margin-bottom:34px"><b style="font-size:30px">ICON <span>by ŽUŽA</span></b></div>
+    <div id="pickBtns" class="pickgrid"></div>
   </div>
 
   <!-- APP -->
@@ -129,7 +122,7 @@
       <div class="brand"><b>ICON <span>by ŽUŽA</span></b></div>
       <div style="display:flex;align-items:center;gap:12px">
         <span class="who" id="who"></span>
-        <button class="btn ghost sm" onclick="logout()">Odjava</button>
+        <button class="btn ghost sm" onclick="openPick()">Promijeni</button>
       </div>
     </header>
 
@@ -204,17 +197,11 @@ const COLORS=["#c6a15b","#6ba3c6","#9b6bc6","#5bc19a","#c66b8f","#c6a15b","#7bc6
 const staffColor = s => COLORS[Math.max(0,STAFF.indexOf(s))%COLORS.length];
 const STATUS={confirmed:"Potvrđen",done:"Završen",cancelled:"Otkazan"};
 
-// "Zapamti me"
-let remember = localStorage.getItem('icon-remember') !== '0';
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON, {
-  auth:{persistSession:true, autoRefreshToken:true, detectSessionInUrl:false, storage:window.localStorage, storageKey:'icon-zuza-auth'}
-});
-window.addEventListener('pagehide',()=>{ if(!remember) sb.auth.signOut(); });
-// traži od uređaja da ne briše podatke kad se app ubije iz pozadine
-if(navigator.storage&&navigator.storage.persist)navigator.storage.persist().catch(()=>{});
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 let cur = new Date(); cur.setHours(0,0,0,0);
 let appts = [];        // selected day
 let weekCounts = {};   // ymd -> count
+let me = localStorage.getItem('icon-barber') || '';
 
 const $ = id => document.getElementById(id);
 const pad = n => String(n).padStart(2,'0');
@@ -226,41 +213,20 @@ STAFF.forEach(s=>{
   $('filter').insertAdjacentHTML('beforeend',`<option>${s}</option>`);
 });
 
-// trajno čuvanje (cookie + localStorage; cookie je nevidljiv, bez pitanja)
-function saveCred(e,p){const v=btoa(unescape(encodeURIComponent(JSON.stringify({e,p}))));
-  try{localStorage.setItem('icon-cred',v);}catch{}
-  document.cookie='icon_cred='+v+'; path=/; max-age=63072000; SameSite=Lax; Secure';}
-function readCred(){
-  let v=null; const m=document.cookie.match(/(?:^|; )icon_cred=([^;]+)/); if(m)v=m[1];
-  if(!v){try{v=localStorage.getItem('icon-cred');}catch{}}
-  if(!v)return null;
-  try{return JSON.parse(decodeURIComponent(escape(atob(v))));}catch{return null;}
-}
-function clearCred(){try{localStorage.removeItem('icon-cred');}catch{}
-  document.cookie='icon_cred=; path=/; max-age=0; SameSite=Lax; Secure';}
-
-// ---- Auth ----
-async function login(){
-  $('loginErr').textContent='';
-  remember = $('remember').checked;
-  localStorage.setItem('icon-remember', remember?'1':'0');
-  const email=$('email').value.trim(), password=$('pass').value;
-  const {error}=await sb.auth.signInWithPassword({email,password});
-  if(error){$('loginErr').textContent=error.message;return;}
-  if(remember)saveCred(email,password); else clearCred();
-}
-async function logout(){clearCred();await sb.auth.signOut();}
-async function tryAutoLogin(){
-  const c=readCred(); if(!c)return;
-  $('email').value=c.e; $('pass').value=c.p;
-  const {data}=await sb.auth.getSession();
-  if(!data.session){const {error}=await sb.auth.signInWithPassword({email:c.e,password:c.p});
-    if(error)clearCred();}
-}
-sb.auth.onAuthStateChange((_e,s)=>{
-  if(s){$('loginView').style.display='none';$('appView').style.display='block';$('who').textContent=s.user.email;goToday();subscribe();}
-  else{$('appView').style.display='none';$('loginView').style.display='block';}
+// ---- Izbor barbera ----
+STAFF.forEach(s=>{
+  const b=document.createElement('button'); b.className='pickcard';
+  const g=`linear-gradient(145deg,${staffColor(s)},${staffColor(s)}bb)`;
+  b.innerHTML=`<span class="circ" style="background:${g}">${s[0]}</span><span class="nm">${s}</span>`;
+  b.onclick=()=>setBarber(s); $('pickBtns').appendChild(b);
 });
+function setBarber(s){me=s;localStorage.setItem('icon-barber',s);showApp();}
+function openPick(){$('appView').style.display='none';$('pickView').style.display='block';}
+function showApp(){
+  $('pickView').style.display='none';$('appView').style.display='block';
+  $('who').textContent=me; goToday(); subscribe();
+}
+function start(){ if(me)showApp(); else openPick(); }
 
 // ---- Date rail (scrollable) ----
 function railRange(){
@@ -349,7 +315,7 @@ function setStatus(v){mStatusVal=v;[...$('mStatus').children].forEach(x=>x.class
 function openNew(){
   $('mTitle').textContent='Novi termin';
   $('mId').value='';$('mClient').value='';$('mPhone').value='';$('mService').value='';
-  $('mDate').value=ymd(cur);$('mStaff').value=$('filter').value||STAFF[0];
+  $('mDate').value=ymd(cur);$('mStaff').value=$('filter').value||me||STAFF[0];
   $('mStart').value='09:00';$('mEnd').value='09:30';$('mNote').value='';
   setStatus('confirmed');$('mErr').textContent='';$('mDel').style.display='none';
   $('modal').classList.add('on');$('mClient').focus();
@@ -400,8 +366,7 @@ $('modal').addEventListener('click',e=>{if(e.target.id==='modal')closeModal();})
 (()=>{const icon="data:image/svg+xml,"+encodeURIComponent("<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='96' fill='#0a0a0c'/><text x='256' y='352' font-family='Georgia,serif' font-weight='700' font-size='300' fill='#c6a15b' text-anchor='middle'>I</text></svg>");
 const mf={name:"ICON by ŽUŽA",short_name:"ICON",start_url:".",scope:".",display:"standalone",orientation:"portrait",background_color:"#0a0a0c",theme_color:"#0a0a0c",icons:[{src:icon,sizes:"any",type:"image/svg+xml",purpose:"any maskable"}]};
 $('mf').href=URL.createObjectURL(new Blob([JSON.stringify(mf)],{type:"application/manifest+json"}));})();
-$('remember').checked = remember;
-tryAutoLogin();
+start();
 </script>
 </body>
 </html>
