@@ -60,12 +60,16 @@
   .daynav{display:flex;align-items:center;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:6px}
   .daynav .date{font-weight:700;min-width:180px;text-align:center;font-size:14px;text-transform:capitalize}
 
-  .summary{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:14px;font-size:13px;color:var(--muted)}
+  .summary{display:flex;gap:10px 16px;flex-wrap:wrap;margin-bottom:14px;font-size:13px;color:var(--muted);align-items:center}
   .summary b{color:var(--txt)}
+  .scount{display:inline-flex;align-items:center;gap:6px;background:var(--panel);border:1px solid var(--line);padding:4px 10px;border-radius:20px}
 
   .grid{display:grid;gap:10px}
   .appt{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--c,var(--gold));border-radius:12px;padding:13px 15px;display:flex;gap:13px;align-items:flex-start;transition:.15s}
   .appt:hover{border-color:var(--line2)}
+  .appt.past{opacity:.55}
+  .appt.next{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold),0 6px 20px rgba(198,161,91,.14)}
+  .nextlbl{font-size:9px;font-weight:800;letter-spacing:1px;color:var(--gold2);margin-top:3px}
   .appt.cancelled{opacity:.5}
   .appt.cancelled .body b{text-decoration:line-through}
   .appt .time{font-weight:800;color:var(--gold2);min-width:98px;font-variant-numeric:tabular-nums;font-size:14px}
@@ -267,7 +271,17 @@ function pickDay(k){cur=new Date(k+'T00:00:00');load();}
 async function load(){
   const {data,error}=await sb.from('appointments').select('*').eq('day',ymd(cur)).order('start_time');
   if(error){console.error(error);return;}
-  appts=data||[]; loadWeek(); render();
+  appts=data||[]; await autoComplete(); loadWeek(); render();
+}
+// potvrđeni termini čiji je početak prošao više od 30 min -> "završen"
+async function autoComplete(){
+  const now=new Date();
+  const due=appts.filter(a=>a.status==='confirmed'&&a.start_time&&
+    (now - new Date(a.day+'T'+a.start_time)) > 30*60*1000);
+  if(!due.length)return;
+  const ids=due.map(a=>a.id);
+  await sb.from('appointments').update({status:'done'}).in('id',ids);
+  due.forEach(a=>a.status='done');
 }
 function subscribe(){
   sb.channel('appts').on('postgres_changes',{event:'*',schema:'public',table:'appointments'},()=>load()).subscribe();
@@ -280,14 +294,29 @@ function render(){
   const f=$('filter').value, q=$('search').value.trim().toLowerCase();
   let rows=appts.filter(a=>(!f||a.staff===f)&&(!q||(a.client||'').toLowerCase().includes(q)||(a.service||'').toLowerCase().includes(q)));
   const active=rows.filter(a=>a.status!=='cancelled').length;
-  $('summary').innerHTML=`<span><b>${rows.length}</b> termina</span><span><b>${active}</b> aktivnih</span>`;
+  // brojač po barberu (aktivni termini, bez otkazanih)
+  const perStaff=STAFF.map(s=>{
+    const n=appts.filter(a=>a.staff===s&&a.status!=='cancelled').length;
+    return n?`<span class="scount"><span class="dot" style="background:${staffColor(s)}"></span>${s}: <b>${n}</b></span>`:'';
+  }).filter(Boolean).join('');
+  $('summary').innerHTML=`<span><b>${rows.length}</b> termina</span><span><b>${active}</b> aktivnih</span>${perStaff}`;
   const list=$('list');
   if(!rows.length){list.innerHTML='<div class="empty">Nema termina za ovaj dan.</div>';return;}
+  // sljedeći predstojeći termin (danas) za isticanje
+  const now=new Date(), todayKey=ymd(now);
+  let nextId=null;
+  if(ymd(cur)===todayKey){
+    const up=rows.filter(a=>a.status==='confirmed'&&a.start_time&&new Date(a.day+'T'+a.start_time)>=now)
+      .sort((x,y)=>x.start_time.localeCompare(y.start_time));
+    if(up[0])nextId=up[0].id;
+  }
   list.innerHTML=rows.map(a=>{
     const c=staffColor(a.staff), st=a.status||'confirmed';
     const phone=a.phone?`<a class="call" href="tel:${a.phone}">📞 ${esc(a.phone)}</a>`:'';
-    return `<div class="appt ${st==='cancelled'?'cancelled':''}" style="--c:${c}">
-      <div class="time">${a.start_time?.slice(0,5)||''}</div>
+    const past=a.start_time&&new Date(a.day+'T'+a.start_time)<now&&st!=='cancelled';
+    const isNext=a.id===nextId;
+    return `<div class="appt ${st==='cancelled'?'cancelled':''} ${past&&!isNext?'past':''} ${isNext?'next':''}" style="--c:${c}">
+      <div class="time">${a.start_time?.slice(0,5)||''}${isNext?'<div class="nextlbl">SLJEDEĆI</div>':''}</div>
       <div class="body">
         <b>${esc(a.client)||'—'}</b>
         <div class="meta">${esc(a.service)||''}</div>
@@ -313,13 +342,22 @@ function jumpTo(v){if(v){cur=new Date(v+'T00:00:00');cur.setHours(0,0,0,0);load(
 let mStatusVal='confirmed';
 function pickStatus(b){[...$('mStatus').children].forEach(x=>x.classList.remove('on'));b.classList.add('on');mStatusVal=b.dataset.v;}
 function setStatus(v){mStatusVal=v;[...$('mStatus').children].forEach(x=>x.classList.toggle('on',x.dataset.v===v));}
-function openNew(){
+function openNew(time){
   $('mTitle').textContent='Novi termin';
   $('mId').value='';$('mClient').value='';$('mPhone').value='';$('mService').value='';
   $('mDate').value=ymd(cur);$('mStaff').value=$('filter').value||me||STAFF[0];
-  $('mStart').value='09:00';$('mNote').value='';
+  $('mStart').value=time||nextFreeTime();$('mNote').value='';
   setStatus('confirmed');$('mErr').textContent='';$('mDel').style.display='none';
   $('modal').classList.add('on');$('mClient').focus();
+}
+// predlaže sljedeći slobodan sat (za brzi upis)
+function nextFreeTime(){
+  const f=$('filter').value||me;
+  const taken=new Set(appts.filter(a=>(!f||a.staff===f)&&a.status!=='cancelled'&&a.start_time).map(a=>a.start_time.slice(0,5)));
+  const today=ymd(cur)===ymd(new Date());
+  let start=9; if(today){const h=new Date().getHours(); if(h>=9)start=h+1;}
+  for(let h=start;h<=20;h++){const t=pad(h)+':00'; if(!taken.has(t))return t;}
+  return '09:00';
 }
 function edit(id){
   const a=appts.find(x=>x.id===id);if(!a)return;
